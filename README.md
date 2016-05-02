@@ -21,3 +21,6 @@ Note that there are two fitness functions available:
 
 The Euclidean distance could work fine, but is highly non-monotonic.  That is, it does not reflect how flose the ball gets to the objective along the maze.  The second compares the move sequence to the solution move sequence, using a string difference comparison algorithm (the Levenshtein distance, which tells the number of simple string edits between two strings.), using the library: https://pypi.python.org/pypi/Distance
 
+GenomePopulation.main_full()  creates a population and runs through generations of mutation and recombination, also printing the best genome strings and histograms of the genome population.  
+
+At the end it displays the resulting maze state when running the best genome.
