@@ -19,8 +19,12 @@ Note that there are two fitness functions available:
 - Euclidean Distance
 - String Distance
 
-The Euclidean distance could work fine, but is highly non-monotonic.  That is, it does not reflect how flose the ball gets to the objective along the maze.  The second compares the move sequence to the solution move sequence, using a string difference comparison algorithm (the Levenshtein distance, which tells the number of simple string edits between two strings.), using the library: https://pypi.python.org/pypi/Distance
+The Euclidean distance could work fine, but is highly non-monotonic.  That is, it does not reflect how flose the ball gets to the objective along the maze.  
 
-GenomePopulation.main_full()  creates a population and runs through generations of mutation and recombination, also printing the best genome strings and histograms of the genome population.  
+The string distance compares the move sequence to the solution move sequence, using a string difference comparison algorithm (the Levenshtein distance, which tells the number of simple string edits between two strings.), using the library: https://pypi.python.org/pypi/Distance
 
-At the end it displays the resulting maze state when running the best genome.
+The last several main() functions basically create a population and run through generations using mutation and recombination, also printing the best genome strings and histograms of the genome population.  
+
+At the end the resulting maze state is displayed when running the best genome.
+
+Both fitness functions seem to have some faults.  Better would be a suffix similarity function, telling exactly how many steps are needed to reach the goal.
