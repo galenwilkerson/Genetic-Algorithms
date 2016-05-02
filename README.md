@@ -14,5 +14,10 @@ We then find the "fitness" by the distance to the goal location.
 
 Now, we can create a population of "Genomes" and mutate, recombine them over many generations to see how they do.
 
+Note that there are two fitness functions available:
 
+- Euclidean Distance
+- String Distance
+
+The Euclidean distance could work fine, but is highly non-monotonic.  That is, it does not reflect how flose the ball gets to the objective along the maze.  The second compares the move sequence to the solution move sequence, using a string difference comparison algorithm (the Levenshtein distance, which tells the number of simple string edits between two strings.), using the library: https://pypi.python.org/pypi/Distance
 
