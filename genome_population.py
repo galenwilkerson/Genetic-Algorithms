@@ -46,6 +46,8 @@ class GenomePopulation:
         
         self.populationSize = populationSize        
         self.genomeLength = genomeLength
+        
+        # here I just mean one instruction, not 3 as in biological codons
         self.codons = set(alphabet)
     
         for i in range(self.populationSize):
@@ -67,11 +69,9 @@ class GenomePopulation:
         
 
    
-    def mutateGenome(self, genome, populationSize = 10, p = 0.5):
+    def mutateGenome(self, genome, p = 0.5):
         '''
         randomly (uniform, P < p) mutate each codon in a genome to a random value
-        fill out the population with size populationSize
-        
         '''
         
         # turn the set of possible codons to a list for random choice
@@ -105,8 +105,40 @@ class GenomePopulation:
             mutatedGenome = self.mutateGenome(genome, p = 0.5)
             self.genomePopAndFitness[mutatedGenome] = -1
 
-                                
+                             
+                             
+    def frameShiftMutateGenome(self, genome):
+        '''
+        input genome as string or list
+        randomly swap values of two codons in a genome 
+        (here I just mean one instruction, not 3 as in biological codons)
+        return mutated genome as string
+        '''
+        genomeAsList = list(genome)
+
+        i = rnd.randint(0, len(genomeAsList) - 1)
+        j = rnd.randint(0, len(genomeAsList) - 1)
+        temp = genomeAsList[i]
+        genomeAsList[i] = genomeAsList[j]
+        genomeAsList[j] = temp
+        
+        return("".join(genomeAsList))    
+
     
+
+    def frameShiftMutateAllGenomes(self):
+        '''
+        frame shift mutate each genome to produce a new genome
+        NOTE: MAY RESULT IN A POPULATION LARGER THAN DESIRED MAXIMUM POPULATION
+        '''
+        
+        genomes = list(self.genomePopAndFitness.keys())
+
+        for genome in genomes:
+
+            # mutate and add to genome dictionary, with fitness of -1
+            mutatedGenome = self.frameShiftMutateGenome(genome)
+            self.genomePopAndFitness[mutatedGenome] = -1    
     
     
     
@@ -260,6 +292,20 @@ class GenomePopulation:
 
         self.genomePopAndFitness = genomePopAndFitness
 
+    def removeDuplicates(self):
+        '''
+        remove duplicate keys from genomePopAndFitness
+        assumes fitness is identical for identical genome strings
+        '''
+        # get the set of keys
+        keySet = set(self.genomePopAndFitness.keys())
+
+        uniqueDict = {}        
+        for key in list(keySet):
+            uniqueDict[key] = self.genomePopAndFitness[key]
+        self.genomePopAndFitness = uniqueDict
+
+
 
     def mutationStep(self, mutationProbability, maze, populationSize):
         '''
@@ -267,6 +313,7 @@ class GenomePopulation:
         
         - mutate
         - find fitness
+        - remove duplicates
         - sort by fitness
         - resize to populationsize        
         '''        
@@ -274,11 +321,37 @@ class GenomePopulation:
         self.mutateAllGenomes(mutationProbability)
 
         self.setFitnessAllGenomes(maze)
+        
+        self.removeDuplicates()
 
         sortedGenepoolbyFitness = self.sortByFitness()   
     
         self.cullBestSize(sortedGenepoolbyFitness, populationSize)
 
+
+
+    def frameShiftMutationStep(self, maze, populationSize):
+        '''
+        one frame shift mutation step:
+        
+        - mutate
+        - find fitness
+        - remove duplicates
+        - sort by fitness
+        - resize to populationsize        
+        '''        
+        
+        self.frameShiftMutateAllGenomes()
+
+        self.setFitnessAllGenomes(maze)
+        
+        self.removeDuplicates()
+
+        sortedGenepoolbyFitness = self.sortByFitness()   
+    
+        self.cullBestSize(sortedGenepoolbyFitness, populationSize)
+        
+        
 
     def recombinationStep(self, p, maze, populationSize):
         '''
@@ -286,6 +359,7 @@ class GenomePopulation:
         
         - recombine
         - find fitness
+        - remove duplicates
         - sort by fitness
         - resize to populationsize  
         '''
@@ -293,6 +367,8 @@ class GenomePopulation:
         self.recombineAllGenomes(p)
  
         self.setFitnessAllGenomes(maze)
+        
+        self.removeDuplicates()
 
         sortedGenepoolbyFitness = self.sortByFitness()   
    
@@ -506,8 +582,8 @@ A:  while(fitness > 0 AND num_generations < 10):
 
     '''
 
-    populationSize = 10000
-    numGenerations = 10
+    populationSize = 1000
+    numGenerations = 12
     
     # create a population        
     genePool = GenomePopulation(populationSize)
@@ -577,7 +653,7 @@ A:  while(fitness > 0):
 
     remove 1/2, 
     
-    mutate
+    mutate (in place)
     
     resize to populationSize
 
@@ -586,7 +662,20 @@ A:  while(fitness > 0):
     resize to populationSize
     '''
 
-    populationSize = 10000
+    ######  GLOBAL PARAMETERS
+
+    populationSize = 1000
+    numGenerations = 12
+    
+    # probability of mutating each codon
+    mutationProbability = 0.9
+
+    # the mutation bias, toward one genome or the other
+    mutationBias = 0.5
+
+
+    #######################
+
         
     # create a population        
     genePool = GenomePopulation(populationSize)
@@ -621,10 +710,7 @@ A:  while(fitness > 0):
 
     generationNum = 0
     
-    while(bestFitness > 0 and generationNum < 10):
-        
-        # probability of mutating each codon
-        mutationProbability = 0.9
+    while(bestFitness > 0 and generationNum < numGenerations):
         
         print("mutating")
         
@@ -633,10 +719,9 @@ A:  while(fitness > 0):
      
         print("Recombining")
         
-        # the mutation bias, toward one genome or the other
-        p = 0.5
         
-        genePool.recombinationStep(p, maze, populationSize)
+        
+        genePool.recombinationStep(mutationBias, maze, populationSize)
         
         # sort genepool by fitness
 #        print("Sorted genepool (tuples): ")
@@ -656,11 +741,243 @@ A:  while(fitness > 0):
 
         genePool.fitnessHistogram()
         
+        # create a labyrinth
+        maze = labyrinth.Labyrinth()
+        genePool.drawStateThisGenome(maze, "moves: " + bestGenome)
+        
+        
         # draw the state of the maze using the best genome
+
+
+
+def main_full_frame_shift_mutate():
+    '''
+    finally do everything:
+    
+    create a population
+    
+A:  while(fitness > 0):  
+    
+    find the fitness
+    
+    sort by fitness
+
+    remove 1/2, 
+    
+    mutate (frame shift)
+    
+    resize to populationSize
+
+    recombine
+
+    resize to populationSize
+    '''
+
+    ######  GLOBAL PARAMETERS
+
+    populationSize = 1000
+    numGenerations = 12
+    
+    # probability of mutating each codon
+    mutationProbability = 0.9
+
+    # the mutation bias, toward one genome or the other
+    mutationBias = 0.5
+
+
+    #######################
+
+        
+    # create a population        
+    genePool = GenomePopulation(populationSize)
+
+    print("Starting genepool")    
+#    genePool.printGenes()
+    
+
     # create a labyrinth
     maze = labyrinth.Labyrinth()
-    genePool.drawStateThisGenome(maze, "moves: " + bestGenome)
+    maze.drawState()    
+
+    # print fitnesses 
+    print("Fitness:")
+#    print(genePool.genomePopAndFitness)
+    print
+    print("Setting fitness")
+    #- set the fitness of each genome
+    genePool.setFitnessAllGenomes(maze)
+    
+    # print fitnesses 
+    print("Fitness:")
+#    print(genePool.genomePopAndFitness)
+    print
+    
+    # sort genepool by fitness
+    print("Sorted genepool (tuples): ")
+    sortedGenepoolbyFitness = genePool.sortByFitness()   
+#    print(sortedGenepoolbyFitness)
+
+    bestFitness = sortedGenepoolbyFitness[0][1]
+
+    generationNum = 0
+    
+    while(bestFitness > 0 and generationNum < numGenerations):
         
+        print("mutating")
+        
+        # mutate each each codon with probability 1/2, fill out to populationSize
+        genePool.frameShiftMutationStep(maze, populationSize)
+     
+        print("Recombining")
+        
+        
+        
+        genePool.recombinationStep(mutationBias, maze, populationSize)
+        
+        # sort genepool by fitness
+#        print("Sorted genepool (tuples): ")
+        
+         
+#        print(sortedGenepoolbyFitness)
+    
+        # print the best of the gene pool
+        sortedGenepoolbyFitness = genePool.sortByFitness()  
+        bestFitness = sortedGenepoolbyFitness[0][1]
+        bestGenome = sortedGenepoolbyFitness[0][0]
+        print("best 5 genomes:")
+        print(sortedGenepoolbyFitness[:5])
+        
+        print("Generation: ", generationNum, "best genome", bestGenome, "best fitness: ", bestFitness)
+        generationNum += 1
+
+        genePool.fitnessHistogram()
+        
+        # create a labyrinth
+        maze = labyrinth.Labyrinth()
+        genePool.drawStateThisGenome(maze, "moves: " + bestGenome)
+        
+        
+        # draw the state of the maze using the best genome
+
+def main_both_kinds_mutate_and_recomb():
+    '''
+    finally do everything:
+    
+    create a population
+    
+A:  while(fitness > 0):  
+    
+    find the fitness
+    
+    sort by fitness
+
+    remove 1/2, 
+    
+    mutate (frame shift)
+    
+    resize to populationSize
+
+    mutate (in place)
+    
+    resize to populationSize
+    
+    recombine
+
+    resize to populationSize
+    '''
+
+    ######  GLOBAL PARAMETERS
+
+    populationSize = 1000
+    numGenerations = 12
+    
+    # probability of mutating each codon
+    mutationProbability = 0.9
+
+    # the mutation bias, toward one genome or the other
+    mutationBias = 0.5
+
+
+    #######################
+
+        
+    # create a population        
+    genePool = GenomePopulation(populationSize)
+
+    print("Starting genepool")    
+#    genePool.printGenes()
+    
+
+    # create a labyrinth
+    maze = labyrinth.Labyrinth()
+    maze.drawState()    
+
+    # print fitnesses 
+    print("Fitness:")
+#    print(genePool.genomePopAndFitness)
+    print
+    print("Setting fitness")
+    #- set the fitness of each genome
+    genePool.setFitnessAllGenomes(maze)
+    
+    # print fitnesses 
+    print("Fitness:")
+#    print(genePool.genomePopAndFitness)
+    print
+    
+    # sort genepool by fitness
+    print("Sorted genepool (tuples): ")
+    sortedGenepoolbyFitness = genePool.sortByFitness()   
+#    print(sortedGenepoolbyFitness)
+
+    bestFitness = sortedGenepoolbyFitness[0][1]
+
+    generationNum = 0
+    
+    while(bestFitness > 0 and generationNum < numGenerations):
+        
+        print("frame shift mutating")
+        
+        # mutate each each codon with probability 1/2, fill out to populationSize
+        genePool.frameShiftMutationStep(maze, populationSize)
+     
+     
+        print("in place mutating")
+        
+        # mutate each each codon with probability 1/2, fill out to populationSize
+        genePool.mutationStep(mutationProbability, maze, populationSize)
+      
+     
+        print("Recombining")
+        
+        
+        
+        genePool.recombinationStep(mutationBias, maze, populationSize)
+        
+        # sort genepool by fitness
+#        print("Sorted genepool (tuples): ")
+        
+         
+#        print(sortedGenepoolbyFitness)
+    
+        # print the best of the gene pool
+        sortedGenepoolbyFitness = genePool.sortByFitness()  
+        bestFitness = sortedGenepoolbyFitness[0][1]
+        bestGenome = sortedGenepoolbyFitness[0][0]
+        print("best 5 genomes:")
+        print(sortedGenepoolbyFitness[:5])
+        
+        print("Generation: ", generationNum, "best genome", bestGenome, "best fitness: ", bestFitness)
+        generationNum += 1
+
+        genePool.fitnessHistogram()
+        
+        # create a labyrinth
+        maze = labyrinth.Labyrinth()
+        genePool.drawStateThisGenome(maze, "moves: " + bestGenome)
+        
+        
+        # draw the state of the maze using the best genome
 
 
 if __name__ == '__main__':
@@ -670,5 +987,7 @@ if __name__ == '__main__':
     #main_mutate()
     #main_recombine()
     #main_mutate_generations()
-    main_full()
+    #main_full_in_place_mutate()
+    #main_full_frame_shift_mutate()
+    main_both_kinds_mutate_and_recomb()
     
